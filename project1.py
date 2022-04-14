@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 frameWidth = 640
 frameHeight = 480
@@ -8,19 +9,41 @@ cap.set(3, frameWidth)
 cap.set(4, frameHeight)
 cap.set(10,150) # to set brightness
 
-myColors = [] # list of colours that we want to detect using cam
+myColors = [[5,107,0,19,255,255],
+            [133,56,0,159,156,255],
+            [57,76,0,100,255,255]] # list of colours that we want to detect using cam
 # we need to give it the minimum and maximum hue values
+
+myColorValues = [[]] # It is BGR not RGB here
 
 
 def findColor(img):
     imgHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    lower = np.array([h_min, s_min, v_min])
-    upper = np.array([h_max, s_max, v_max])
-    mask = cv2.inRange(imgHSV,lower,upper)
-    cv2.imshow("img",mask)
+    for color in myColors:
+        lower = np.array(color[0][0:3])
+        upper = np.array(color[0][3:6])
+        mask = cv2.inRange(imgHSV,lower,upper)
+        x,y = getContours(mask)
+        cv2.circle(img,Result,(x,y),10,(255,0,0),cv2.FILLED)
+        cv2.imshow(str(color[0]),mask)
+
+def getContours(img):
+    contours,hierarchy = cv2.findContours(img,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+    x,y,w,h = 0,0,0,0
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+        if area>500:
+            #cv2.drawContours(imgResult, cnt, -1, (255, 0, 0), 3)
+            peri = cv2.arcLength(cnt,True)
+            approx = cv2.approxPolyDP(cnt,0.02*peri,True)
+            x, y, w, h = cv2.boundingRect(approx)
+    return x+w//2,y # gives us the top point instead of the centre of the bounding box so we can draw properly
 
 while True:
     success, img = cap.read()
-    cv2.imshow("Result",img)
+    imgResult = img.copy()
+    findColor(img, myColors)
+    cv2.imshow("Result",imgResult)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
